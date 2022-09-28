@@ -1,5 +1,6 @@
 import math
 import re
+
 import omni.ext
 import omni.kit.commands
 import omni.kit.viewport_legacy
@@ -172,7 +173,7 @@ class CameraViewOptimizer(omni.ext.IExt):
     # ext_id is current extension id. It can be used with extension manager to query additional information, like where
     # this extension is located on filesystem.
     def on_startup(self, ext_id):
-        print("[karpenko.camera_view_optimizer.ext] MyExtension startup")
+        print("[karpenko.camera_view_optimizer.ext] CameraViewOptimizer startup")
         self._usd_context = omni.usd.get_context()
         self.stage = self._usd_context.get_stage()
         self._window = ui.Window("Camera View Omptimizer", width=300, height=300)
@@ -273,7 +274,8 @@ class CameraViewOptimizer(omni.ext.IExt):
                         # base path where to search for objects
                         with ui.VStack():
                             with ui.HStack(height=0):
-                                tooltip = "Base path where to search for objects. If empty or invalid, DefaultPrim will be used"
+                                tooltip = "Base path where to search for objects. If empty or invalid, " \
+                                          "DefaultPrim will be used"
                                 ui.Label("Base path", elided_text=True, tooltip=tooltip)
                                 self._base_path_field = ui.StringField(tooltip=tooltip)
                                 self._base_path_field.model.set_value(self.stage.GetDefaultPrim().GetPath().pathString)
@@ -306,7 +308,7 @@ class CameraViewOptimizer(omni.ext.IExt):
         """
         It deletes all the variables that were created in the extension
         """
-        print("[karpenko.camera_view_optimizer.ext] MyExtension shutdown")
+        print("[karpenko.camera_view_optimizer.ext] CameraViewOptimizer shutdown")
         self._fov_slider = None
         self._max_size_slider = None
         self._max_distance_field = None
@@ -316,8 +318,14 @@ class CameraViewOptimizer(omni.ext.IExt):
         self._delete_objects = None
         self._button_optimize = None
         self._button_show_all = None
+        self._button_delete_hidden = None
 
     def get_default_prim(self):
+        """
+        If the base path field is empty, return the default prim, otherwise return the prim at the path in the base path
+        field
+        :return: The default prim.
+        """
         if self._base_path_field.model.as_string == "":
             return self.stage.GetDefaultPrim()
         else:
@@ -373,6 +381,7 @@ class CameraViewOptimizer(omni.ext.IExt):
     def show_all(self):
         """
         It gets all the hidden objects in the scene, and if there are any, it shows them
+        :return: A list of objects that were hidden.
         """
         objects_to_show = self.get_all_hidden_objects()
         if objects_to_show:
@@ -380,10 +389,12 @@ class CameraViewOptimizer(omni.ext.IExt):
                 'ToggleVisibilitySelectedPrims',
                 selected_paths=[i.GetPath() for i in objects_to_show],
             )
+        return objects_to_show
 
     def delete_hidden(self):
         """
         It gets all the hidden objects in the scene, and if there are any, it deletes them
+        :return: A list of objects that were deleted.
         """
         objects_to_delete = self.get_all_hidden_objects()
 
@@ -392,3 +403,4 @@ class CameraViewOptimizer(omni.ext.IExt):
                 'DeletePrims',
                 paths=[i.GetPath() for i in objects_to_delete],
             )
+        return objects_to_delete

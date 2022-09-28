@@ -1,7 +1,7 @@
 # Camera View Optimizer
 ![welcome](readme_media/welcome.jpg)
 ### About
-Omniverse extensions that allows you quickly hide/delete objects that are not visible to the camera to save some performance and VRAM.
+Omniverse extensions that allow you to quickly hide/delete objects that are not visible to the camera to save performance and VRAM.
 
 ## Quick links
 
@@ -21,7 +21,7 @@ To add a this extension to your Omniverse app:
 2. Add this as a search path: `git://github.com/Vadim-Karpenko/omniverse-camera-view-optimizer?branch=main&dir=exts`
 3. Search for **Camera View Optimizer** extension and enable it
 
-A new window will appear alongside the Property tab:
+A new window will appear next to the Properties tab:
 
 
 ![start window](readme_media/start_window.jpg)
@@ -30,7 +30,7 @@ A new window will appear alongside the Property tab:
 - Open a scene you want to optimize
 - Open an extension window
 - The current view in the viewport is used to scan for visible objects, so make sure your camera is positioned correctly.
-- Make sure settings set correctly.
+- Make sure settings are set correctly. Hover over each option to read about what it does.
 - Click **Optimize** button.
 
 ## Linking with an Omniverse app
