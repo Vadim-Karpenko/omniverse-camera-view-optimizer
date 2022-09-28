@@ -1,6 +1,5 @@
 import math
 import re
-
 import omni.ext
 import omni.kit.commands
 import omni.kit.viewport_legacy
@@ -18,9 +17,14 @@ from .style import cvo_window_style
 class CameraViewOptimizer(omni.ext.IExt):
 
     def optimize(self):
+        """
+        It's hiding all objects that are not visible from the camera
+        """
         window = get_active_viewport_window()
         # Getting the camera path and prim from the stage.
         camera_path = get_active_viewport_camera_string()
+        if not camera_path:
+            return
         camera_prim = self.stage.GetPrimAtPath(camera_path)
         # get camera transform
         camera_translate = camera_prim.GetAttribute("xformOp:translate").Get()
@@ -72,9 +76,8 @@ class CameraViewOptimizer(omni.ext.IExt):
                 # Calculating the distance between the camera and the new translate location.
                 distance_to_cameraforward = self.get_distance_between_translations(camera_new_location, prim_translate)
                 # If the distance between the camera and the prim is less than the distance between
-                # the camera and the new translate location, it means that the prim is behind the camera.
-                # simillar, and extremely simplified, to how radio telescopes measure distance to the stars,
-                # using paralax effect between two points.
+                # the camera and the new translate location, which is 10 units forward from first locatio,
+                #  it means that the prim is behind the camera.
                 if is_visible:
                     if distance_to_cameraforward > distance_to_camera + 5:
                         is_visible = False
@@ -179,13 +182,13 @@ class CameraViewOptimizer(omni.ext.IExt):
                 ui.Spacer(height=10)
                 ui.Separator(height=6)
                 ui.Spacer(height=10)
-                with ui.ScrollingFrame(height=250):
+                with ui.ScrollingFrame(height=ui.Percent(63)):
                     with ui.VStack():
                         with ui.VStack():
                             with ui.HStack(height=0):
                                 tooltip = "When checking the visibility of the object, the camera FOV will be set " \
                                             "to the value specified in the slider and then back once scan is complete"
-                                ui.Label("Scan FOV (mm)", tooltip=tooltip)
+                                ui.Label("Scan FOV (mm)", elided_text=True, tooltip=tooltip)
                                 # Slider for the FOV value of the camera
                                 self._fov_slider = ui.IntSlider(
                                     min=2,
@@ -200,7 +203,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                         with ui.HStack(height=0):
                             tooltip = "Ignore object if one of the three dimensions is greater than values provided," \
                                       "useful for walls, floors, etc."
-                            ui.Label("Max size (mm)", tooltip=tooltip)
+                            ui.Label("Max size (mm)", elided_text=True, tooltip=tooltip)
                             # Slider for the max object size
                             self._max_size_slider = ui.IntField(
                                 min=0,
@@ -216,8 +219,9 @@ class CameraViewOptimizer(omni.ext.IExt):
                             tooltip = "Should the extension hide lights?"
                             # Available types of objects to hide
                             with ui.HStack(height=0):
-                                ui.Label("Process Lights", tooltip=tooltip)
-                                self._hide_lights = ui.CheckBox(tooltip=tooltip)
+                                ui.Label("Process Lights", elided_text=True, tooltip=tooltip, width=ui.Percent(50))
+                                self._hide_lights = ui.CheckBox(tooltip=tooltip, width=ui.Percent(5))
+                                ui.Line(name="default", width=ui.Percent(45))
 
                         ui.Spacer(height=10)
 
@@ -236,9 +240,15 @@ class CameraViewOptimizer(omni.ext.IExt):
                         with ui.VStack():
                             tooltip = "No matter the size of the object, if it is too far away, it will be hidden"
                             with ui.HStack(height=0):
-                                ui.Label("Ignore size for distant objects", tooltip=tooltip)
-                                self._ignore_size_distant_objects = ui.CheckBox(tooltip=tooltip)
+                                ui.Label(
+                                    "Ignore size for distant objects",
+                                    elided_text=True,
+                                    tooltip=tooltip,
+                                    width=ui.Percent(50)
+                                )
+                                self._ignore_size_distant_objects = ui.CheckBox(tooltip=tooltip, width=ui.Percent(5))
                                 self._ignore_size_distant_objects.model.set_value(False)
+                                ui.Line(name="default", width=ui.Percent(45))
 
                         ui.Spacer(height=10)
 
@@ -246,7 +256,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                         with ui.VStack():
                             tooltip = "Hide objects by title. Plain text match and regex is supported."
                             with ui.HStack(height=0):
-                                ui.Label("Hide if contains in title", tooltip=tooltip)
+                                ui.Label("Hide if contains in title", elided_text=True, tooltip=tooltip)
                                 self._hide_objects_field = ui.StringField(tooltip=tooltip)
 
                         ui.Spacer(height=10)
@@ -255,7 +265,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                         with ui.VStack():
                             tooltip = "Show objects by title. Plain text match and regex is supported."
                             with ui.HStack(height=0):
-                                ui.Label("Show if contains in title", tooltip=tooltip)
+                                ui.Label("Show if contains in title", elided_text=True, tooltip=tooltip)
                                 self._show_objects_field = ui.StringField(tooltip=tooltip)
 
                         ui.Spacer(height=10)
@@ -263,23 +273,30 @@ class CameraViewOptimizer(omni.ext.IExt):
                         # base path where to search for objects
                         with ui.VStack():
                             with ui.HStack(height=0):
-                                ui.Label("Base path")
-                                self._base_path_field = ui.StringField()
+                                tooltip = "Base path where to search for objects. If empty or invalid, DefaultPrim will be used"
+                                ui.Label("Base path", elided_text=True, tooltip=tooltip)
+                                self._base_path_field = ui.StringField(tooltip=tooltip)
                                 self._base_path_field.model.set_value(self.stage.GetDefaultPrim().GetPath().pathString)
-
-                        ui.Spacer(height=10)
-
-                        # Delete boolean
-                        with ui.VStack():
-                            with ui.HStack(height=0):
-                                ui.Label("Delete objects")
-                                self._delete_objects = ui.CheckBox()
 
                 ui.Spacer()
 
                 with ui.VStack(height=40):
+                    with ui.HStack(height=40):
+                        self._button_show_all = ui.Button(
+                            "Show all",
+                            height=40,
+                            clicked_fn=self.show_all,
+                        )
+
+                        self._button_delete_hidden = ui.Button(
+                            "Delete hidden",
+                            height=40,
+                            clicked_fn=self.delete_hidden,
+                        )
+
+                with ui.VStack(height=40):
                     # Button to execute the extension
-                    self._button = ui.Button(
+                    self._button_optimize = ui.Button(
                         "Optimize",
                         height=40,
                         clicked_fn=self.optimize,
@@ -297,7 +314,18 @@ class CameraViewOptimizer(omni.ext.IExt):
         self._show_objects_field = None
         self._base_path_field = None
         self._delete_objects = None
-        self._button = None
+        self._button_optimize = None
+        self._button_show_all = None
+
+    def get_default_prim(self):
+        if self._base_path_field.model.as_string == "":
+            return self.stage.GetDefaultPrim()
+        else:
+            custom_default_prim = self.stage.GetPrimAtPath(self._base_path_field.model.as_string)
+            if not custom_default_prim:
+                return self.stage.GetDefaultPrim()
+            else:
+                return custom_default_prim
 
     def get_all_objects(self, only_visible=False):
         """
@@ -310,8 +338,7 @@ class CameraViewOptimizer(omni.ext.IExt):
         if not self.stage:
             return []
         valid_objects = []
-        default_prim = self.stage.GetDefaultPrim()
-        # Get all objects and check if it has Looks folder
+        default_prim = self.get_default_prim()
         for obj in default_prim.GetAllChildren():
             if obj:
                 if only_visible:
@@ -323,3 +350,45 @@ class CameraViewOptimizer(omni.ext.IExt):
                 else:
                     valid_objects.append(obj)
         return valid_objects
+
+    def get_all_hidden_objects(self):
+        """
+        It returns a list of all the hidden objects in the scene
+
+        :return: A list of objects
+        """
+        if not self.stage:
+            return []
+        valid_objects = []
+        default_prim = self.get_default_prim()
+        for obj in default_prim.GetAllChildren():
+            if obj:
+                visibility_attr = obj.GetAttribute("visibility")
+                if visibility_attr:
+                    visibility = visibility_attr.Get()
+                    if visibility == "invisible":
+                        valid_objects.append(obj)
+        return valid_objects
+
+    def show_all(self):
+        """
+        It gets all the hidden objects in the scene, and if there are any, it shows them
+        """
+        objects_to_show = self.get_all_hidden_objects()
+        if objects_to_show:
+            omni.kit.commands.execute(
+                'ToggleVisibilitySelectedPrims',
+                selected_paths=[i.GetPath() for i in objects_to_show],
+            )
+
+    def delete_hidden(self):
+        """
+        It gets all the hidden objects in the scene, and if there are any, it deletes them
+        """
+        objects_to_delete = self.get_all_hidden_objects()
+
+        if objects_to_delete:
+            omni.kit.commands.execute(
+                'DeletePrims',
+                paths=[i.GetPath() for i in objects_to_delete],
+            )
