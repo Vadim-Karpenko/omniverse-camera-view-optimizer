@@ -47,15 +47,27 @@ class CameraViewOptimizer(omni.ext.IExt):
         self._button_show_all = None
         self._button_delete_hidden = None
 
+    def check_stage(self):
+        """
+        It gets the current stage from the USD context
+        """
+        if not hasattr(self, "stage") or not self.stage:
+            self._usd_context = omni.usd.get_context()
+            self.stage = self._usd_context.get_stage()
+
     def optimize(self):
         """
         It's hiding all objects that are not visible from the camera
         """
+        self.check_stage()
+        if not self.stage:
+            return
         window = get_active_viewport_window()
         # Getting the camera path and prim from the stage.
         camera_path = get_active_viewport_camera_string()
         if not camera_path:
             return
+        print(camera_path)
         camera_prim = self.stage.GetPrimAtPath(camera_path)
         # get camera transform
         camera_translate = camera_prim.GetAttribute("xformOp:translate").Get()
@@ -110,7 +122,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                 # the camera and the new translate location, which is 10 units forward from first locatio,
                 #  it means that the prim is behind the camera.
                 if is_visible:
-                    if distance_to_cameraforward > distance_to_camera + 5:
+                    if distance_to_cameraforward > distance_to_camera + 6:
                         is_visible = False
 
                 is_distant = False
@@ -158,10 +170,14 @@ class CameraViewOptimizer(omni.ext.IExt):
                     "ConeLight"]
                 )
             if not_visible:
-                omni.kit.commands.execute(
-                    'ToggleVisibilitySelectedPrims',
-                    selected_paths=[i["prim_path"] for i in not_visible if i["type"] not in not_allowed_types],
-                )
+                for prim in not_visible:
+                    if prim["type"] not in not_allowed_types:
+                        omni.kit.commands.execute(
+                            'ChangeProperty',
+                            prop_path=prim["prim_path"].AppendProperty('visibility'),
+                            value='invisible',
+                            prev=None
+                        )
 
             if focal_length:
                 # Changing the focal length of the camera back to the value before the scan.
@@ -199,7 +215,7 @@ class CameraViewOptimizer(omni.ext.IExt):
         prim_bbox = bbox_cache.ComputeWorldBound(prim)
         prim_range = prim_bbox.ComputeAlignedRange()
         return prim_range.GetSize()
-        
+
     def render_main_window(self):
         self._window = ui.Window("Camera View Omptimizer", width=300, height=300)
         with self._window.frame:
@@ -303,7 +319,8 @@ class CameraViewOptimizer(omni.ext.IExt):
                                           "DefaultPrim will be used, so make sure this is value is correct."
                                 ui.Label("Base path:", elided_text=True, tooltip=tooltip)
                                 self._base_path_field = ui.StringField(tooltip=tooltip)
-                                self._base_path_field.model.set_value(self.stage.GetDefaultPrim().GetPath().pathString)
+                                if self.stage:
+                                    self._base_path_field.model.set_value(self.stage.GetDefaultPrim().GetPath().pathString)
 
                 ui.Spacer()
 
@@ -351,7 +368,14 @@ class CameraViewOptimizer(omni.ext.IExt):
 
         if property_win:
             self._window.deferred_dock_in("Property")
+        
         self._setup_window_task = None
+
+        for _ in range(10):
+            await omni.kit.app.get_app().next_update_async()
+        self.check_stage()
+        if self.stage:
+            self._base_path_field.model.set_value(self.stage.GetDefaultPrim().GetPath().pathString)
 
     def get_default_prim(self):
         """
@@ -359,6 +383,9 @@ class CameraViewOptimizer(omni.ext.IExt):
         field
         :return: The default prim.
         """
+        self.check_stage()
+        if not self.stage:
+            return
         if self._base_path_field.model.as_string == "":
             return self.stage.GetDefaultPrim()
         else:
@@ -380,7 +407,7 @@ class CameraViewOptimizer(omni.ext.IExt):
             return []
         valid_objects = []
         default_prim = self.get_default_prim()
-        for obj in default_prim.GetAllChildren():
+        for obj in self.get_all_children_of_prim(default_prim):
             if obj:
                 if only_visible:
                     visibility_attr = obj.GetAttribute("visibility")
@@ -392,6 +419,20 @@ class CameraViewOptimizer(omni.ext.IExt):
                     valid_objects.append(obj)
         return valid_objects
 
+    def get_all_children_of_prim(self, prim):
+        """
+        It takes a prim as an argument and returns a list of all the prims that are children of that prim
+
+        :param prim: The prim you want to get the children of
+        :return: A list of all the children of the prim.
+        """
+        children = []
+        for child in prim.GetAllChildren():
+            if child.GetTypeName() != "Scope":
+                children.append(child)
+            children.extend(self.get_all_children_of_prim(child))
+        return children
+
     def get_all_hidden_objects(self):
         """
         It returns a list of all the hidden objects in the scene
@@ -402,7 +443,7 @@ class CameraViewOptimizer(omni.ext.IExt):
             return []
         valid_objects = []
         default_prim = self.get_default_prim()
-        for obj in default_prim.GetAllChildren():
+        for obj in self.get_all_children_of_prim(default_prim):
             if obj:
                 visibility_attr = obj.GetAttribute("visibility")
                 if visibility_attr:

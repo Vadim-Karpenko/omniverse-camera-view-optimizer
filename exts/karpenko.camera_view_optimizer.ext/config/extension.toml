@@ -4,20 +4,25 @@ version = "1.0.0"
 
 # The title and description fields are primarily for displaying extension info in UI
 title = "Camera View Optimizer"
-description="The simplest python extension example. Use it as a starting point for your extensions."
+description="Omniverse extensions that allow you to quickly hide/delete objects that are not visible to the camera to save performance and VRAM."
 
 # Path (relative to the root) or content of readme markdown file for UI.
 readme  = "docs/README.md"
 
 # URL of the extension source repository.
-repository = ""
+repository = "https://github.com/Vadim-Karpenko/omniverse-camera-view-optimizer"
 
 # One of categories for UI.
-category = "Example"
+category = "Lighting & Rendering"
 
 # Keywords for the extension
-keywords = ["kit", "example"]
+keywords = ["camera", "view", "optimizer", "optimization", "performance", "vram", "memory", "hide", "delete", "visibility", "culling"]
 
+authors = ["Vadim Karpenko"]
+
+icon = "data/icon.jpg"
+
+preview_image = "data/preview_image.jpg"
 
 # Use omni.ui to build simple UI
 [dependencies]
