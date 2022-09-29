@@ -18,7 +18,10 @@ To add a this extension to your Omniverse app:
 2. Search for **Camera View Optimizer** extension and enable it
 ### Manual
 1. Go to **Extension Manager** (Window - Extensions) — **Gear Icon** — **Extension Search Path**
-2. Add this as a search path: `git://github.com/Vadim-Karpenko/omniverse-camera-view-optimizer?branch=main&dir=exts`
+2. Add this as a search path: 
+    ```
+    git://github.com/Vadim-Karpenko/omniverse-camera-view-optimizer?branch=main&dir=exts
+    ```
 3. Search for **Camera View Optimizer** extension and enable it
 
 A new window will appear next to the Properties tab:

@@ -1,3 +1,4 @@
+import asyncio
 import math
 import re
 
@@ -16,6 +17,35 @@ from .style import cvo_window_style
 
 
 class CameraViewOptimizer(omni.ext.IExt):
+    # ext_id is current extension id. It can be used with extension manager to query additional information, like where
+    # this extension is located on filesystem.
+    def on_startup(self, ext_id):
+        print("[karpenko.camera_view_optimizer.ext] CameraViewOptimizer startup")
+        self._usd_context = omni.usd.get_context()
+        self.stage = self._usd_context.get_stage()
+        self.render_main_window()
+        # show the window in the usual way if the stage is loaded
+        if self.stage:
+            self._window.deferred_dock_in("Property")
+        else:
+            # otherwise, show the window after the stage is loaded
+            self._setup_window_task = asyncio.ensure_future(self._dock_window())
+
+    def on_shutdown(self):
+        """
+        It deletes all the variables that were created in the extension
+        """
+        print("[karpenko.camera_view_optimizer.ext] CameraViewOptimizer shutdown")
+        self._fov_slider = None
+        self._max_size_slider = None
+        self._max_distance_field = None
+        self._hide_objects_field = None
+        self._show_objects_field = None
+        self._base_path_field = None
+        self._delete_objects = None
+        self._button_optimize = None
+        self._button_show_all = None
+        self._button_delete_hidden = None
 
     def optimize(self):
         """
@@ -169,13 +199,8 @@ class CameraViewOptimizer(omni.ext.IExt):
         prim_bbox = bbox_cache.ComputeWorldBound(prim)
         prim_range = prim_bbox.ComputeAlignedRange()
         return prim_range.GetSize()
-
-    # ext_id is current extension id. It can be used with extension manager to query additional information, like where
-    # this extension is located on filesystem.
-    def on_startup(self, ext_id):
-        print("[karpenko.camera_view_optimizer.ext] CameraViewOptimizer startup")
-        self._usd_context = omni.usd.get_context()
-        self.stage = self._usd_context.get_stage()
+        
+    def render_main_window(self):
         self._window = ui.Window("Camera View Omptimizer", width=300, height=300)
         with self._window.frame:
             with ui.VStack(style=cvo_window_style):
@@ -189,7 +214,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                             with ui.HStack(height=0):
                                 tooltip = "When checking the visibility of the object, the camera FOV will be set " \
                                             "to the value specified in the slider and then back once scan is complete"
-                                ui.Label("Scan FOV (mm)", elided_text=True, tooltip=tooltip)
+                                ui.Label("Scan FOV (mm):", elided_text=True, tooltip=tooltip)
                                 # Slider for the FOV value of the camera
                                 self._fov_slider = ui.IntSlider(
                                     min=2,
@@ -204,7 +229,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                         with ui.HStack(height=0):
                             tooltip = "Ignore object if one of the three dimensions is greater than values provided," \
                                       "useful for walls, floors, etc."
-                            ui.Label("Max size (mm)", elided_text=True, tooltip=tooltip)
+                            ui.Label("Max object size:", elided_text=True, tooltip=tooltip)
                             # Slider for the max object size
                             self._max_size_slider = ui.IntField(
                                 min=0,
@@ -220,7 +245,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                             tooltip = "Should the extension hide lights?"
                             # Available types of objects to hide
                             with ui.HStack(height=0):
-                                ui.Label("Process Lights", elided_text=True, tooltip=tooltip, width=ui.Percent(50))
+                                ui.Label("Process Lights:", elided_text=True, tooltip=tooltip, width=ui.Percent(50))
                                 self._hide_lights = ui.CheckBox(tooltip=tooltip, width=ui.Percent(5))
                                 ui.Line(name="default", width=ui.Percent(45))
 
@@ -229,9 +254,9 @@ class CameraViewOptimizer(omni.ext.IExt):
                         # max distance int field
                         with ui.VStack():
                             tooltip = "Max distance of the object from the camera. If the object is further than this" \
-                                      "value, it will be hidden even if it is visible to the camera."
+                                      " value, it will be hidden even if it is visible to the camera."
                             with ui.HStack(height=0):
-                                ui.Label("Max distance (mm)", tooltip=tooltip)
+                                ui.Label("Max distance:", tooltip=tooltip)
                                 self._max_distance_field = ui.IntField(tooltip=tooltip)
                                 self._max_distance_field.model.set_value(10000)
 
@@ -242,7 +267,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                             tooltip = "No matter the size of the object, if it is too far away, it will be hidden"
                             with ui.HStack(height=0):
                                 ui.Label(
-                                    "Ignore size for distant objects",
+                                    "Ignore size for distant objects:",
                                     elided_text=True,
                                     tooltip=tooltip,
                                     width=ui.Percent(50)
@@ -255,18 +280,18 @@ class CameraViewOptimizer(omni.ext.IExt):
 
                         # String field to hide objects by title
                         with ui.VStack():
-                            tooltip = "Hide objects by title. Plain text match and regex is supported."
+                            tooltip = "Hide objects by title. Partial text match and regex is supported."
                             with ui.HStack(height=0):
-                                ui.Label("Hide if contains in title", elided_text=True, tooltip=tooltip)
+                                ui.Label("Hide if contains in title:", elided_text=True, tooltip=tooltip)
                                 self._hide_objects_field = ui.StringField(tooltip=tooltip)
 
                         ui.Spacer(height=10)
 
                         # string field to show objects by title
                         with ui.VStack():
-                            tooltip = "Show objects by title. Plain text match and regex is supported."
+                            tooltip = "Show objects by title. Partial text match and regex is supported."
                             with ui.HStack(height=0):
-                                ui.Label("Show if contains in title", elided_text=True, tooltip=tooltip)
+                                ui.Label("Show if contains in title:", elided_text=True, tooltip=tooltip)
                                 self._show_objects_field = ui.StringField(tooltip=tooltip)
 
                         ui.Spacer(height=10)
@@ -275,8 +300,8 @@ class CameraViewOptimizer(omni.ext.IExt):
                         with ui.VStack():
                             with ui.HStack(height=0):
                                 tooltip = "Base path where to search for objects. If empty or invalid, " \
-                                          "DefaultPrim will be used"
-                                ui.Label("Base path", elided_text=True, tooltip=tooltip)
+                                          "DefaultPrim will be used, so make sure this is value is correct."
+                                ui.Label("Base path:", elided_text=True, tooltip=tooltip)
                                 self._base_path_field = ui.StringField(tooltip=tooltip)
                                 self._base_path_field.model.set_value(self.stage.GetDefaultPrim().GetPath().pathString)
 
@@ -304,21 +329,29 @@ class CameraViewOptimizer(omni.ext.IExt):
                         clicked_fn=self.optimize,
                     )
 
-    def on_shutdown(self):
+    async def _dock_window(self):
         """
-        It deletes all the variables that were created in the extension
+        It waits for the property window to appear, then docks the window to it
         """
-        print("[karpenko.camera_view_optimizer.ext] CameraViewOptimizer shutdown")
-        self._fov_slider = None
-        self._max_size_slider = None
-        self._max_distance_field = None
-        self._hide_objects_field = None
-        self._show_objects_field = None
-        self._base_path_field = None
-        self._delete_objects = None
-        self._button_optimize = None
-        self._button_show_all = None
-        self._button_delete_hidden = None
+        property_win = None
+
+        frames = 3
+        while frames > 0:
+            if not property_win:
+                property_win = ui.Workspace.get_window("Property")
+            if property_win:
+                break  # early out
+
+            frames = frames - 1
+            await omni.kit.app.get_app().next_update_async()
+
+        # Dock to property window after 5 frames. It's enough for window to appear.
+        for _ in range(5):
+            await omni.kit.app.get_app().next_update_async()
+
+        if property_win:
+            self._window.deferred_dock_in("Property")
+        self._setup_window_task = None
 
     def get_default_prim(self):
         """
