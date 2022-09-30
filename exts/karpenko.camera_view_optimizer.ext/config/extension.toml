@@ -31,3 +31,6 @@ preview_image = "data/preview_image.jpg"
 # Main python module this extension provides, it will be publicly available as "import karpenko.camera_view_optimizer.ext".
 [[python.module]]
 name = "karpenko.camera_view_optimizer.ext"
+
+[[python.module]]
+name = "karpenko.camera_view_optimizer.ext.commands"

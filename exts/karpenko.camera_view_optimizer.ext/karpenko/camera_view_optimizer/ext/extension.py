@@ -67,7 +67,6 @@ class CameraViewOptimizer(omni.ext.IExt):
         camera_path = get_active_viewport_camera_string()
         if not camera_path:
             return
-        print(camera_path)
         camera_prim = self.stage.GetPrimAtPath(camera_path)
         # get camera transform
         camera_translate = camera_prim.GetAttribute("xformOp:translate").Get()
@@ -110,8 +109,17 @@ class CameraViewOptimizer(omni.ext.IExt):
             for prim in all_objects:
                 # Getting the position of the prim in the window.
                 # Because it is a screen-space calculation, for some reason it returns is_visible=True when objects
-                # is behind the camera.
-                ui_position, is_visible = get_ui_position_for_prim(window, prim.GetPath(), alignment=None)
+                # is right behind the camera.
+                ui_position, is_visible = get_ui_position_for_prim(window, prim.GetPath(), alignment=0)
+                # additional check for visibility with different origin points of the object 
+                if not is_visible:
+                    ui_position, is_visible = get_ui_position_for_prim(window, prim.GetPath(), alignment=1)
+                if not is_visible:
+                    ui_position, is_visible = get_ui_position_for_prim(window, prim.GetPath(), alignment=2)
+                if not is_visible:
+                    ui_position, is_visible = get_ui_position_for_prim(window, prim.GetPath(), alignment=3)
+                if not is_visible:
+                    ui_position, is_visible = get_ui_position_for_prim(window, prim.GetPath(), alignment=4)
                 # Getting the position of the prim in the world.
                 prim_translate = prim.GetAttribute("xformOp:translate").Get()
                 # Calculating the distance between the camera and the prim.
@@ -170,14 +178,10 @@ class CameraViewOptimizer(omni.ext.IExt):
                     "ConeLight"]
                 )
             if not_visible:
-                for prim in not_visible:
-                    if prim["type"] not in not_allowed_types:
-                        omni.kit.commands.execute(
-                            'ChangeProperty',
-                            prop_path=prim["prim_path"].AppendProperty('visibility'),
-                            value='invisible',
-                            prev=None
-                        )
+                omni.kit.commands.execute(
+                    'HideSelectedPrimsCommand',
+                    selected_paths=[i["prim_path"] for i in not_visible if i["type"] not in not_allowed_types],
+                )
 
             if focal_length:
                 # Changing the focal length of the camera back to the value before the scan.
@@ -233,12 +237,12 @@ class CameraViewOptimizer(omni.ext.IExt):
                                 ui.Label("Scan FOV (mm):", elided_text=True, tooltip=tooltip)
                                 # Slider for the FOV value of the camera
                                 self._fov_slider = ui.IntSlider(
-                                    min=2,
-                                    max=180,
+                                    min=1,
+                                    max=300,
                                     step=1,
                                     tooltip=tooltip,
                                 )
-                                self._fov_slider.model.set_value(8)
+                                self._fov_slider.model.set_value(4)
 
                         ui.Spacer(height=10)
 
