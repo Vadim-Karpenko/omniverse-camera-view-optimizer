@@ -320,7 +320,9 @@ class CameraViewOptimizer(omni.ext.IExt):
                                 ui.Label("Base path:", elided_text=True, tooltip=tooltip)
                                 self._base_path_field = ui.StringField(tooltip=tooltip)
                                 if self.stage:
-                                    self._base_path_field.model.set_value(self.stage.GetDefaultPrim().GetPath().pathString)
+                                    self._base_path_field.model.set_value(
+                                        self.stage.GetDefaultPrim().GetPath().pathString
+                                    )
 
                 ui.Spacer()
 
@@ -368,7 +370,7 @@ class CameraViewOptimizer(omni.ext.IExt):
 
         if property_win:
             self._window.deferred_dock_in("Property")
-        
+
         self._setup_window_task = None
 
         for _ in range(10):
