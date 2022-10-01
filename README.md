@@ -36,6 +36,16 @@ A new window will appear next to the Properties tab:
 - Make sure settings are set correctly. Hover over each option to read about what it does.
 - Click **Optimize** button.
 
+**Hide if contains in title** and **Show if contains in title** fields support a regular expressions (regex) that allows you to filter any object based on its title, with any pattern, simple or complex.
+Regex examples:
+`(^Abs.*)` - all names starting with `Abs`
+`(.*nt$)` - all names ending with `nt`
+`(.*ph.*)` - contains `ph`
+`(.*\d.*)` - contains any number
+`(^((?!tree).)*$)` - any title that not contains `tree`.
+You can also combine multiple conditions:
+`(.*El.*|t1$)` - Has `El` OR ends with `t1`
+`(.*El.*)(t1$)` - Has `El` AND ends with `t1`
 ## Linking with an Omniverse app
 
 For a better developer experience, it is recommended to create a folder link named `app` to the *Omniverse Kit* app installed from *Omniverse Launcher*. A convenience script to use is included.
