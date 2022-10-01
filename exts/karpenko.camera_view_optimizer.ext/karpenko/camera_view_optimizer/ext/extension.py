@@ -466,7 +466,7 @@ class CameraViewOptimizer(omni.ext.IExt):
         objects_to_show = self.get_all_hidden_objects()
         if objects_to_show:
             omni.kit.commands.execute(
-                'ToggleVisibilitySelectedPrims',
+                'ShowSelectedPrimsCommand',
                 selected_paths=[i.GetPath() for i in objects_to_show],
             )
         return objects_to_show
