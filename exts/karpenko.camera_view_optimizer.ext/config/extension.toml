@@ -20,9 +20,9 @@ keywords = ["camera", "view", "optimizer", "optimization", "performance", "vram"
 
 authors = ["Vadim Karpenko"]
 
-icon = "data/icon.jpg"
+icon = "data/icon.png"
 
-preview_image = "data/preview_image.jpg"
+preview_image = "data/preview_image.png"
 
 # Use omni.ui to build simple UI
 [dependencies]
