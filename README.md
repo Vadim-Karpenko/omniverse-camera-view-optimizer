@@ -1,7 +1,7 @@
 # Camera View Optimizer
 ![welcome](readme_media/welcome.jpg)
 ### About
-Omniverse extensions that allow you to quickly hide/delete objects that are not visible to the camera to save performance and VRAM.
+Omniverse extensions that allow you to quickly hide/remove objects that are not visible to the camera, to improve performance and decrease VRAM usage.
 
 ## Quick links
 
