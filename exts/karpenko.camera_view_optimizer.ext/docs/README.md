@@ -1,2 +1,2 @@
 ## Camera View Optimizer
-Save precious video memory and speed up render times by hiding objects that are not visible to the camera!
+Omniverse extensions that allow you to quickly hide/remove objects that are not visible to the camera, to improve performance and decrease VRAM usage.
