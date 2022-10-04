@@ -13,7 +13,7 @@ Omniverse extensions that allow you to quickly hide/remove objects that are not 
 
 ## Installation
 To add a this extension to your Omniverse app:
-### From Community tab (Not available at the moment)
+### From Community tab
 1. Go to **Extension Manager** (Window - Extensions) — Community tab
 2. Search for **Camera View Optimizer** extension and enable it
 ### Manual
