@@ -94,7 +94,7 @@ class CameraViewOptimizer(omni.ext.IExt):
         # Get the camera focal length
         focal_length_param = Sdf.Path(f'{camera_path}.focalLength')
         focal_length = self.stage.GetPrimAtPath(Sdf.Path(camera_path)).GetAttribute('focalLength').Get()
-        max_size = 150
+        max_size = self._max_size_slider.model.as_float
         with omni.kit.undo.group():
             if all_objects:
                 # Changing the value of the focal length parameter of the camera so we can scan more objects.
@@ -257,7 +257,7 @@ class CameraViewOptimizer(omni.ext.IExt):
                                 step=1,
                                 tooltip=tooltip,
                             )
-                            self._max_size_slider.model.set_value(300)
+                            self._max_size_slider.model.set_value(150)
 
                         ui.Spacer(height=10)
 
